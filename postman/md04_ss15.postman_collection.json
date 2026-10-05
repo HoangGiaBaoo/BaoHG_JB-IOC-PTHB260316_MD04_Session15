@@ -1,0 +1,91 @@
+{
+  "info": {
+    "name": "md04_ss15 - JWT Microservices",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "gateway", "value": "http://localhost:8080" },
+    { "key": "username", "value": "student" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "oldRefreshToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Login",
+      "event": [{
+        "listen": "test",
+        "script": { "exec": [
+          "const b = pm.response.json();",
+          "pm.collectionVariables.set('accessToken', b.accessToken);",
+          "pm.collectionVariables.set('refreshToken', b.refreshToken);"
+        ] }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{gateway}}/api/auth/login",
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"123456\"\n}" }
+      }
+    },
+    {
+      "name": "2. GET courses (COURSE_READ)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{gateway}}/api/courses"
+      }
+    },
+    {
+      "name": "3. POST course (COURSE_WRITE)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{gateway}}/api/courses",
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Docker co ban\"\n}" }
+      }
+    },
+    {
+      "name": "4. Refresh (rotation)",
+      "event": [{
+        "listen": "prerequest",
+        "script": { "exec": ["pm.collectionVariables.set('oldRefreshToken', pm.collectionVariables.get('refreshToken'));"] }
+      }, {
+        "listen": "test",
+        "script": { "exec": [
+          "if (pm.response.code === 200) {",
+          "  const b = pm.response.json();",
+          "  pm.collectionVariables.set('accessToken', b.accessToken);",
+          "  pm.collectionVariables.set('refreshToken', b.refreshToken);",
+          "}"
+        ] }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{gateway}}/api/auth/refresh",
+        "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+      }
+    },
+    {
+      "name": "5. Refresh lai bang token CU (mong doi 403)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{gateway}}/api/auth/refresh",
+        "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{oldRefreshToken}}\"\n}" }
+      }
+    },
+    {
+      "name": "6. Logout (blacklist jti)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{gateway}}/api/auth/logout"
+      }
+    }
+  ]
+}
